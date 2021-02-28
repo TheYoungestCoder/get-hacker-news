@@ -2,9 +2,9 @@ package hackernews
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
-	"fmt"
 	"time"
 )
 
@@ -31,7 +31,6 @@ type HNStory struct {
 func GetHNStories() ([]HNStory, error) {
 	resp, err := http.Get(apiURL)
 	defer resp.Body.Close()
-	
 
 	var jsonString string
 	var page frontPage
@@ -40,26 +39,26 @@ func GetHNStories() ([]HNStory, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HN API: status code %d != 200", resp.StatusCode)
 	}
-				     
+
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	jsonString = string(bodyBytes)
 	err = json.Unmarshal([]byte(jsonString), &page)
 
 	if err != nil {
-		nil, err
+		return nil, err
 	}
 
 	for _, story := range page.Hits {
 		stories = append(stories, HNStory{
 			Title: story.Title,
 			URL:   story.URL,
-			Time:  time.Unix(story.Time, 0),
+			Time:  time.Unix(int64(story.Time), 0),
 		})
 	}
 
-	return stories
+	return stories, nil
 }
