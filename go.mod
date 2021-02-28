@@ -1,3 +1,3 @@
-module github.com/TheYoungestCoder/get-hacker-news
+module github.com/TheYoungestCoder/hackernews
 
 go 1.16
