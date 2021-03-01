@@ -17,7 +17,8 @@ type newsHit struct {
 }
 
 type frontPage struct {
-	Hits []newsHit
+	Hits    []newsHit
+	NbPages int `json:"nBPages"`
 }
 
 // HNStory is the structure for all of the hits on the front page
@@ -27,13 +28,8 @@ type HNStory struct {
 	Time  time.Time
 }
 
-// GetHNStories will return an array of HNStory
-func GetHNStories() ([]HNStory, error) {
+func getPage(pageNum int) (*frontPage, error) {
 	resp, err := http.Get(apiURL)
-
-	var jsonString string
-	var page frontPage
-	var stories []HNStory
 
 	if err != nil {
 		return nil, err
@@ -45,14 +41,29 @@ func GetHNStories() ([]HNStory, error) {
 	}
 
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	jsonString = string(bodyBytes)
+	jsonString := string(bodyBytes)
+
+	var page frontPage
 	err = json.Unmarshal([]byte(jsonString), &page)
 
 	if err != nil {
 		return nil, err
 	}
+	return &page, nil
+}
 
-	for _, story := range page.Hits {
+// GetHNStories will return an array of HNStory
+func GetHNStories() ([]HNStory, error) {
+
+	pageNum := 0
+	firstPage, err := getPage(pageNum)
+
+	if err != nil {
+		return nil, err
+	}
+
+	stories := []HNStory{}
+	for _, story := range firstPage.Hits {
 		stories = append(stories, HNStory{
 			Title: story.Title,
 			URL:   story.URL,
@@ -60,5 +71,22 @@ func GetHNStories() ([]HNStory, error) {
 		})
 	}
 
+	totalPages := firstPage.NbPages
+
+	pageNum++
+	for ; pageNum < totalPages; pageNum++ {
+		page, err := getPage(pageNum)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, story := range page.Hits {
+			stories = append(stories, HNStory{
+				Title: story.Title,
+				URL:   story.URL,
+				Time:  time.Unix(story.Time, 0),
+			})
+		}
+	}
 	return stories, nil
 }
