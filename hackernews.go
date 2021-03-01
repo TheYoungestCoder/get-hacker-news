@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const apiURL = "https://hn.algolia.com/api/v1/search?tags=front_page"
+const apiURL = "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=100"
 
 type newsHit struct {
 	URL   string
@@ -17,8 +17,7 @@ type newsHit struct {
 }
 
 type frontPage struct {
-	Hits    []newsHit
-	NbPages int `json:"nBPages"`
+	Hits []newsHit
 }
 
 // HNStory is the structure for all of the hits on the front page
@@ -28,8 +27,13 @@ type HNStory struct {
 	Time  time.Time
 }
 
-func getPage(pageNum int) (*frontPage, error) {
+// GetHNStories will return an array of HNStory
+func GetHNStories() ([]HNStory, error) {
 	resp, err := http.Get(apiURL)
+
+	var jsonString string
+	var page frontPage
+	var stories []HNStory
 
 	if err != nil {
 		return nil, err
@@ -41,29 +45,14 @@ func getPage(pageNum int) (*frontPage, error) {
 	}
 
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	jsonString := string(bodyBytes)
-
-	var page frontPage
+	jsonString = string(bodyBytes)
 	err = json.Unmarshal([]byte(jsonString), &page)
 
 	if err != nil {
 		return nil, err
 	}
-	return &page, nil
-}
 
-// GetHNStories will return an array of HNStory
-func GetHNStories() ([]HNStory, error) {
-
-	pageNum := 0
-	firstPage, err := getPage(pageNum)
-
-	if err != nil {
-		return nil, err
-	}
-
-	stories := []HNStory{}
-	for _, story := range firstPage.Hits {
+	for _, story := range page.Hits {
 		stories = append(stories, HNStory{
 			Title: story.Title,
 			URL:   story.URL,
@@ -71,22 +60,5 @@ func GetHNStories() ([]HNStory, error) {
 		})
 	}
 
-	totalPages := firstPage.NbPages
-
-	pageNum++
-	for ; pageNum < totalPages; pageNum++ {
-		page, err := getPage(pageNum)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, story := range page.Hits {
-			stories = append(stories, HNStory{
-				Title: story.Title,
-				URL:   story.URL,
-				Time:  time.Unix(story.Time, 0),
-			})
-		}
-	}
 	return stories, nil
 }
