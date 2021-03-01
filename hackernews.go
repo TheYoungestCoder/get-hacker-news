@@ -2,6 +2,7 @@ package hackernews
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -12,7 +13,7 @@ const apiURL = "https://hn.algolia.com/api/v1/search?tags=front_page"
 type newsHit struct {
 	URL   string
 	Title string
-	Time  int
+	Time  int `json:"created_at_i"`
 }
 
 type frontPage struct {
@@ -27,24 +28,28 @@ type HNStory struct {
 }
 
 // GetHNStories will return an array of HNStory
-func GetHNStories() []HNStory {
-	resp, httpErr := http.Get(apiURL)
+func GetHNStories() ([]HNStory, error) {
+	resp, err := http.Get(apiURL)
+	defer resp.Body.Close()
+
 	var jsonString string
 	var page frontPage
 	var stories []HNStory
 
-	if httpErr != nil || resp.StatusCode != http.StatusOK {
-		panic(httpErr)
+	if err != nil {
+		return nil, err
 	}
 
-	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HN API: status code %d != 200", resp.StatusCode)
+	}
 
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	jsonString = string(bodyBytes)
-	parseErr := json.Unmarshal([]byte(jsonString), &page)
+	err = json.Unmarshal([]byte(jsonString), &page)
 
-	if parseErr != nil {
-		panic(parseErr)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, story := range page.Hits {
@@ -55,5 +60,5 @@ func GetHNStories() []HNStory {
 		})
 	}
 
-	return stories
+	return stories, nil
 }
