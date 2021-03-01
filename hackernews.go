@@ -13,7 +13,7 @@ const apiURL = "https://hn.algolia.com/api/v1/search?tags=front_page"
 type newsHit struct {
 	URL   string
 	Title string
-	Time  int `json:"created_at_i"`
+	Time  int64 `json:"created_at_i"`
 }
 
 type frontPage struct {
@@ -30,7 +30,6 @@ type HNStory struct {
 // GetHNStories will return an array of HNStory
 func GetHNStories() ([]HNStory, error) {
 	resp, err := http.Get(apiURL)
-	defer resp.Body.Close()
 
 	var jsonString string
 	var page frontPage
@@ -39,6 +38,7 @@ func GetHNStories() ([]HNStory, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HN API: status code %d != 200", resp.StatusCode)
@@ -56,7 +56,7 @@ func GetHNStories() ([]HNStory, error) {
 		stories = append(stories, HNStory{
 			Title: story.Title,
 			URL:   story.URL,
-			Time:  time.Unix(int64(story.Time), 0),
+			Time:  time.Unix(story.Time, 0),
 		})
 	}
 
